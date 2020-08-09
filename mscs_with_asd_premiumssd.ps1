@@ -655,9 +655,12 @@ Invoke-Command -Session $session -ScriptBlock $scriptBlock
 
 # copy mscs config flie from blob to one of node VMs.  
 $session = New-PSSession -Credential $credential -ComputerName `
-    ($domainLeafNameForPublicIp_02 + "." + $location + "." + "cloudapp.azure.com")
+    ($domainLeafNameForPublicIp_02 + "." + $location + "." + "cloudapp.azure.com"), `
+    ($domainLeafNameForPublicIp_03 + "." + $location + "." + "cloudapp.azure.com")
 $scriptBlock = {
-    azcopy.exe copy 'https://csustorageaccountstdv2.blob.core.windows.net/vmconfigs/mscs_configuration.ps1?sv=2019-12-12&ss=bf&srt=sco&sp=rwdlacx&se=2025-08-09T12:50:23Z&st=2020-08-09T04:50:23Z&spr=https&sig=HY7DCp%2FsqVx9ea5Kth3BTH88nBWlEDq22GZNhqK%2B13g%3D' 'C:\Users\Public\Documents\'
+    azcopy.exe copy 'https://csustorageaccountstdv2.blob.core.windows.net/vmconfigs/mscs_configuration.ps1?sv=2019-12-12&ss=bf&srt=co&sp=rlx&se=2999-08-09T22:59:17Z&st=2020-08-09T14:59:17Z&spr=https,http&sig=OpDXIoQZkYw7Zy2jbu4p1%2FgLyXT68z35KoCAMnwIolc%3D' 'C:\Users\Public\Documents\'
+    azcopy.exe copy 'https://csustorageaccountstdv2.blob.core.windows.net/vmapps/fio.exe?sv=2019-12-12&ss=bf&srt=co&sp=rlx&se=2999-08-09T22:59:17Z&st=2020-08-09T14:59:17Z&spr=https,http&sig=OpDXIoQZkYw7Zy2jbu4p1%2FgLyXT68z35KoCAMnwIolc%3D' 'C:\Windows\System32'
+    azcopy.exe copy 'https://csustorageaccountstdv2.blob.core.windows.net/vmapps/diskspd.exe?sv=2019-12-12&ss=bf&srt=co&sp=rlx&se=2999-08-09T22:59:17Z&st=2020-08-09T14:59:17Z&spr=https,http&sig=OpDXIoQZkYw7Zy2jbu4p1%2FgLyXT68z35KoCAMnwIolc%3D' 'C:\Windows\System32'
 }
 Invoke-Command -Session $session -ScriptBlock $scriptBlock
 

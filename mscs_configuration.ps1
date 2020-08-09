@@ -52,3 +52,4 @@ Get-ClusterResource $ClusterIpResourceName | Set-ClusterParameter -Multiple @{
     "Network"="$ClusterNetworkName";
     "EnableDhcp"=0
 }
+
