@@ -345,9 +345,9 @@ $node_vm_01 = Get-azVM -ResourceGroupName $rsg_name -Name $node_vm_01_name
 $node_vm_02 = Get-azVM -ResourceGroupName $rsg_name -Name $node_vm_02_name 
 $node_vm_03 = Get-azVM -ResourceGroupName $rsg_name -Name $node_vm_03_name 
 
-Update-AzVM -ResourceGroupName $resourceGroupName -VM $node_vm_01 -UltraSSDEnabled $true -AsJob
-Update-AzVM -ResourceGroupName $resourceGroupName -VM $node_vm_02 -UltraSSDEnabled $true -AsJob
-Update-AzVM -ResourceGroupName $resourceGroupName -VM $node_vm_03 -UltraSSDEnabled $true -AsJob
+Update-AzVM -ResourceGroupName $rsg_name -VM $node_vm_01 -UltraSSDEnabled $true -AsJob
+Update-AzVM -ResourceGroupName $rsg_name -VM $node_vm_02 -UltraSSDEnabled $true -AsJob
+Update-AzVM -ResourceGroupName $rsg_name -VM $node_vm_03 -UltraSSDEnabled $true -AsJob
 
 Get-Job | Wait-Job
 
