@@ -631,10 +631,10 @@ $scriptBlock = {
         -NoRebootOnCompletion:$false `
         -SysvolPath “C:\Windows\SYSVOL” `
         -Force:$true
-}
+    }
 Invoke-Command -Session $session -ScriptBlock $scriptBlock -ArgumentList $domainPassword, $domainName ,$domainNamNetBios
 
-Start-Sleep 300 # give it 10 minutes for Domain Controller to get online functional
+Start-Sleep 600 # give it 10 minutes for Domain Controller to get online functional
 
 ##########################################################################
 ##### remote commands to install DC, Az modules, and to isntall Az Modules
@@ -653,7 +653,8 @@ $scriptBlock = {
 }
 Invoke-Command -Session $session -ScriptBlock $scriptBlock
 
-# copy mscs config flie from blob to one of node VMs.  
+# copy mscs config (c:\users\public\document) flie from blob to one of node VMs. 
+# also copies multiple io bench tool in c:\windows\system32\ 
 $session = New-PSSession -Credential $credential -ComputerName `
     ($domainLeafNameForPublicIp_02 + "." + $location + "." + "cloudapp.azure.com"), `
     ($domainLeafNameForPublicIp_03 + "." + $location + "." + "cloudapp.azure.com")
