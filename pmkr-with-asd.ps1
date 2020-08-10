@@ -11,7 +11,7 @@ $rsg_location       = "southeastasia"
 
 $os_offer           = "RHEL-HA"
 $os_publisher       = "Redhat"
-$os_sku             = "8.0"
+$os_sku             = "7.4"
 
 $vm_sku             = "Standard_d4s_v3"
 $vm_disksize        = 8192
@@ -288,28 +288,28 @@ $vm_config_01 = New-AzVMConfig -VMName $node_vm_01_name -VMSize $vm_sku -Zone $v
 Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_01_name -Credential $credential | `
 Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
 Add-AzVMNetworkInterface -Id $nic_01.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_01 -AsJob
+New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_01 -Zone $vm_zone -AsJob
 
 Write-Host "Creating VM-02... "
 $vm_config_02 = New-AzVMConfig -VMName $node_vm_02_name -VMSize $vm_sku -Zone $vm_zone | `
 Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_02_name -Credential $credential | `
 Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
 Add-AzVMNetworkInterface -Id $nic_02.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_02 -AsJob
+New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_02 -Zone $vm_zone -AsJob
 
 Write-Host "Creating VM-03... "
 $vm_config_03 = New-AzVMConfig -VMName $node_vm_03_name -VMSize $vm_sku -Zone $vm_zone | `
 Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_03_name -Credential $credential | `
 Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
 Add-AzVMNetworkInterface -Id $nic_03.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_03 -AsJob
+New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_03 -Zone $vm_zone -AsJob
 
 Write-Host "Creating VM-04... "
 $vm_config_04 = New-AzVMConfig -VMName $node_vm_04_name -VMSize $vm_sku -Zone $vm_zone | `
 Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_04_name -Credential $credential | `
 Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
 Add-AzVMNetworkInterface -Id $nic_04.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_04 -AsJob
+New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_04 -Zone $vm_zone -AsJob
 
 Get-Job | Wait-Job
 
@@ -327,7 +327,7 @@ $disk_config_01 = New-AzDiskConfig `
     -DiskMBpsReadOnly  64 `
     -CreateOption Empty `
     -MaxSharesCount 3 `
-    -Zone $zone    
+    -Zone $vm_zone    
 $dsk = New-AzDisk -ResourceGroupName $rsg_name -DiskName 'disk_01' -Disk $disk_config_01
 Write-Host $dsk.Name created...
 
@@ -362,15 +362,15 @@ Get-Job | Wait-Job
 #########################################################################
 
 $node_vm_01 = Get-AzVM -ResourceGroupName $rsg_name -Name $node_vm_01_name
-$node_vm_01 = Add-AzVMDataDisk -VM $node_vm_01 -Name "disk_01" -CreateOption Attach -ManagedDiskId $disk.Id -Lun 0
+$node_vm_01 = Add-AzVMDataDisk -VM $node_vm_01 -Name "disk_01" -CreateOption Attach -ManagedDiskId $dsk.Id -Lun 0
 
 $node_vm_02 = Get-AzVM -ResourceGroupName $rsg_name -Name $node_vm_02_name
-$node_vm_02 = Add-AzVMDataDisk -VM $node_vm_02 -Name "disk_01" -CreateOption Attach -ManagedDiskId $disk.Id -Lun 0
+$node_vm_02 = Add-AzVMDataDisk -VM $node_vm_02 -Name "disk_01" -CreateOption Attach -ManagedDiskId $dsk.Id -Lun 0
 
 $node_vm_03 = Get-AzVM -ResourceGroupName $rsg_name -Name $node_vm_03_name
-$node_vm_03 = Add-AzVMDataDisk -VM $node_vm_03 -Name "disk_01" -CreateOption Attach -ManagedDiskId $disk.Id -Lun 0
+$node_vm_03 = Add-AzVMDataDisk -VM $node_vm_03 -Name "disk_01" -CreateOption Attach -ManagedDiskId $dsk.Id -Lun 0
 
 Update-AzVM -VM $node_vm_01 -ResourceGroupName $rsg_name 
 Update-AzVM -VM $node_vm_02 -ResourceGroupName $rsg_name
-Update-AzVM -VM $node_vm_02 -ResourceGroupName $rsg_name
+Update-AzVM -VM $node_vm_03 -ResourceGroupName $rsg_name
 Write-Host Attaching $dsk.Name to virtual machines completed...
