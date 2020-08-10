@@ -6,7 +6,7 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 # Author: Patrick Shim (pashim@microsoft.com)
 # Copyright (c) Microsoft Corporation. All rights reserved
 
-$rsg_name           = "asd-pmkr-resources"
+$rsg_name           = "asd-pcmk-resources"
 $rsg_location       = "southeastasia"
 
 $os_offer           = "RHEL-HA"
@@ -17,39 +17,39 @@ $vm_sku             = "Standard_d4s_v3"
 $vm_disksize        = 8192
 $vm_zone            = 3
 
-$sa_name            = "pmkrvmstgaccount"
+$sa_name            = "pcmkvmstgaccount"
 $avs_name           = "pmkr-avs-01"
 $lb_probe           = 59998
 
-$node_vm_01_name    = "pmkr-vms-01" # node 01
-$node_vm_02_name    = "pmkr-vms-02" # node 02
-$node_vm_03_name    = "pmkr-vms-03" # node 03
-$node_vm_04_name    = "pmkr-vms-04" # test node 
+$node_vm_01_name    = "vm-pcmk-01" # node 01
+$node_vm_02_name    = "vm-pcmk-02" # node 02
+$node_vm_03_name    = "vm-pcmk-03" # node 03
+$node_vm_04_name    = "vm-pcmk-04" # test node 
 
 $pip_name_01        = "pip-" + $node_vm_01_name
 $pip_name_02        = "pip-" + $node_vm_02_name
 $pip_name_03        = "pip-" + $node_vm_03_name
 $pip_name_04        = "pip-" + $node_vm_04_name
 
+$nic_name_01        = "nic-pcmk-01"
+$nic_name_02        = "nic-pcmk-02"
+$nic_name_03        = "nic-pcmk-03"
+$nic_name_04        = "nic-pcmk-04"
+
+$avs_name           = "avs-pcmk-01"
+$nsg_name           = "nsg-pcmk-01"
+$ilb_name           = "lib-pcmk-01"
+
+$vnet_subnet_names  = "snt-pcmk-01"
+$vnet_name          = "vnt-pcmk-01"
+$vnet_ipaddr_space  = "192.168.1.0/24"
+$vnet_subnet_space  = "192.168.1.0/24"
+
 $vip_01             = "192.168.1.10"
 $iip_01             = "192.168.1.11"
 $iip_02             = "192.168.1.12"
 $iip_03             = "192.168.1.13"
 $iip_04             = "192.168.1.14"
-
-$nic_name_01        = "nic-pmkr-01"
-$nic_name_02        = "nic-pmkr-02"
-$nic_name_03        = "nic-pmkr-03"
-$nic_name_04        = "nic-pmkr-04"
-
-$avs_name           = "avs-pmkr-01"
-$nsg_name           = "nsg-pmkr-01"
-$ilb_name           = "lib-pmkr-01"
-
-$vnet_name          = "vnt-pmkr-01"
-$vnet_ipaddr_space  = "192.168.1.0/24"
-$vnet_subnet_space  = "192.168.1.0/24"
-$vnet_subnet_names  = "snt-pmkr-01"
 
 ###############################################################################
 # Linux OS credential (user / pass) 
@@ -74,7 +74,7 @@ Write-Host "Creating Storage Account..."
 $sta = New-AzStorageAccount `
     -Name $sa_name `
     -Location $rsg_location `
-    -SkuName Premium_LRS `
+    -SkuName Standard_LRS `
     -ResourceGroupName $rsg_name 
 Write-Host $sta.StorageAccountName created...
 
@@ -283,33 +283,99 @@ Write-Host $nic_04.Name created...
 # Linux (Red Hat Enterprise 8.0) Virtual Machines
 ###############################################################################
 
+# VM-01
 Write-Host "Creating VM-01... "
-$vm_config_01 = New-AzVMConfig -VMName $node_vm_01_name -VMSize $vm_sku -Zone $vm_zone | `
-Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_01_name -Credential $credential | `
-Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
-Add-AzVMNetworkInterface -Id $nic_01.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_01 -Zone $vm_zone -AsJob
+$vm_config_01 = New-AzVMConfig `
+    -VMName $node_vm_01_name `
+    -VMSize $vm_sku `
+    -Zone $vm_zone | `
+Set-AzVMOperatingSystem `
+    -Linux `
+    -ComputerName $node_vm_01_name `
+    -Credential $credential | `
+Set-AzVMSourceImage `
+    -PublisherName $os_publisher `
+    -Offer $os_offer `
+    -Skus $os_sku `
+    -Version "latest" | `
+Add-AzVMNetworkInterface `
+    -Id $nic_01.Id -Primary 
+New-AzVM `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -VM $vm_config_01 `
+    -Zone $vm_zone `
+    -AsJob
 
+# VM-02
 Write-Host "Creating VM-02... "
-$vm_config_02 = New-AzVMConfig -VMName $node_vm_02_name -VMSize $vm_sku -Zone $vm_zone | `
-Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_02_name -Credential $credential | `
-Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
-Add-AzVMNetworkInterface -Id $nic_02.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_02 -Zone $vm_zone -AsJob
+$vm_config_02 = New-AzVMConfig `
+    -VMName $node_vm_02_name `
+    -VMSize $vm_sku `
+    -Zone $vm_zone | `
+Set-AzVMOperatingSystem `
+    -Linux `
+    -ComputerName $node_vm_02_name `
+    -Credential $credential | `
+Set-AzVMSourceImage `
+    -PublisherName $os_publisher `
+    -Offer $os_offer `
+    -Skus $os_sku `
+    -Version "latest" | `
+Add-AzVMNetworkInterface `
+    -Id $nic_02.Id -Primary 
+New-AzVM `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -VM $vm_config_02 `
+    -Zone $vm_zone `
+    -AsJob
 
+# VM-03
 Write-Host "Creating VM-03... "
-$vm_config_03 = New-AzVMConfig -VMName $node_vm_03_name -VMSize $vm_sku -Zone $vm_zone | `
-Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_03_name -Credential $credential | `
-Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
-Add-AzVMNetworkInterface -Id $nic_03.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_03 -Zone $vm_zone -AsJob
+$vm_config_03 = New-AzVMConfig `
+    -VMName $node_vm_03_name `
+    -VMSize $vm_sku -Zone $vm_zone | `
+Set-AzVMOperatingSystem `
+    -Linux `
+    -ComputerName $node_vm_03_name `
+    -Credential $credential | `
+Set-AzVMSourceImage `
+    -PublisherName $os_publisher `
+    -Offer $os_offer `
+    -Skus $os_sku `
+    -Version "latest" | `
+Add-AzVMNetworkInterface `
+    -Id $nic_03.Id -Primary 
+New-AzVM `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -VM $vm_config_03 `
+    -Zone $vm_zone `
+    -AsJob
 
 Write-Host "Creating VM-04... "
-$vm_config_04 = New-AzVMConfig -VMName $node_vm_04_name -VMSize $vm_sku -Zone $vm_zone | `
-Set-AzVMOperatingSystem -Linux -ComputerName $node_vm_04_name -Credential $credential | `
-Set-AzVMSourceImage -PublisherName $os_publisher -Offer $os_offer -Skus $os_sku -Version "latest" | `
-Add-AzVMNetworkInterface -Id $nic_04.Id -Primary 
-New-AzVM -ResourceGroupName $rsg_name -Location $rsg_location -VM $vm_config_04 -Zone $vm_zone -AsJob
+$vm_config_04 = New-AzVMConfig `
+    -VMName $node_vm_04_name `
+    -VMSize $vm_sku `
+    -Zone $vm_zone | `
+Set-AzVMOperatingSystem `
+    -Linux `
+    -ComputerName $node_vm_04_name `
+    -Credential $credential | `
+Set-AzVMSourceImage `
+    -PublisherName $os_publisher `
+    -Offer $os_offer `
+    -Skus $os_sku `
+    -Version "latest" | `
+Add-AzVMNetworkInterface `
+    -Id $nic_04.Id -Primary 
+New-AzVM `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -VM $vm_config_04 `
+    -Zone $vm_zone `
+    -AsJob
 
 Get-Job | Wait-Job
 
