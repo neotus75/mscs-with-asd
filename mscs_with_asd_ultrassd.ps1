@@ -700,6 +700,9 @@ $session = New-PSSession -Credential $credential -ComputerName `
 
     $scriptBlock = {
     param($domainName, $domainCredential)
+    # Setting GID / UID for NFS 
+    New-ItemProperty HKLM:\SOFTWARE\Microsoft\ClientForNFS\CurrentVersion\Default -Name AnonymousUID -Value 0 -PropertyType "DWord"
+    New-ItemProperty HKLM:\SOFTWARE\Microsoft\ClientForNFS\CurrentVersion\Default -Name AnonymousGID -Value 0  -PropertyType "DWord" 
     Add-Computer -DomainName $domainName -Credential $domainCredential -Restart -Force
 }
 Invoke-Command -Session $session -ScriptBlock $scriptBlock -ArgumentList $domainName, $domainCredential

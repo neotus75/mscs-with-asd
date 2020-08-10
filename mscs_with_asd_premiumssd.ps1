@@ -267,7 +267,7 @@ $nsg = New-AzNetworkSecurityGroup `
     -Name $nsgName `
     -ResourceGroupName $resourceGroupName `
     -Location $location `
-    -SecurityRules $nsgRuleRdp, $nsgRuleProbe_01, $nsgRuleProbe_02, $nsgRuleWinRmHttp, $nsgRuleWinRmHttps, $nsgRuleIcmpV4, $nsgRuleISCSI, $nsgRuleNetBIOS, $nsgRuleSmb, $nsgRuleRPC `
+    -SecurityRules $nsgRuleRdp, $nsgRuleProbe_01, $nsgRuleProbe_02, $nsgRuleWinRmHttp, $nsgRuleWinRmHttps, $nsgRuleIcmpV4, $nsgRuleISCSI, $nsgRuleNetBIOS, $nsgRuleSmb, $nsgRuleRPC
 
 ##### avs
 Write-Host "Creating Availability Set 1..."
@@ -687,6 +687,9 @@ $session = New-PSSession -Credential $credential -ComputerName `
 
     $scriptBlock = {
     param($domainName, $domainCredential)
+    # Setting GID / UID for NFS 
+    New-ItemProperty HKLM:\SOFTWARE\Microsoft\ClientForNFS\CurrentVersion\Default -Name AnonymousUID -Value 0 -PropertyType "DWord"
+    New-ItemProperty HKLM:\SOFTWARE\Microsoft\ClientForNFS\CurrentVersion\Default -Name AnonymousGID -Value 0  -PropertyType "DWord" 
     Add-Computer -DomainName $domainName -Credential $domainCredential -Restart -Force
 }
 Invoke-Command -Session $session -ScriptBlock $scriptBlock -ArgumentList $domainName, $domainCredential
