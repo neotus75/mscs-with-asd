@@ -6,50 +6,65 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 # Author: Patrick Shim (pashim@microsoft.com)
 # Copyright (c) Microsoft Corporation. All rights reserved
 
-$rsg_name           = "asd-pcmk-resources"
-$rsg_location       = "southeastasia"
+$rsg_name               = "asd-pcmk-resources"
+$rsg_location           = "southeastasia"
 
-$os_offer           = "RHEL-HA"
-$os_publisher       = "Redhat"
-$os_sku             = "7.4"
+# $os_offer             = "RHEL-HA"
+# $os_publisher         = "Redhat"
+# $os_sku               = "7.4"
 
-$vm_sku             = "Standard_d4s_v3"
-$vm_disksize        = 8192
-$vm_zone            = 3
+$os_offer               = "UbuntuServer"
+$os_publisher           = "Canonical"
+$os_sku                 = "18.04-LTS"
 
-$sa_name            = "pcmkvmstgaccount"
-$avs_name           = "pmkr-avs-01"
-$lb_probe           = 59998
+$vm_sku                 = "Standard_d4s_v3"
+$vm_disksize            = 1024
+$vm_disk_iops           = 2048
+$vm_disk_mbps           = 16
+$vm_zone                = 3
 
-$node_vm_01_name    = "vm-pcmk-01" # node 01
-$node_vm_02_name    = "vm-pcmk-02" # node 02
-$node_vm_03_name    = "vm-pcmk-03" # node 03
-$node_vm_04_name    = "vm-pcmk-04" # test node 
+$sa_name                = "pcmkvmstgaccount"
+$avs_name               = "pmkr-avs-01"
+$lb_probe               = 59998
 
-$pip_name_01        = "pip-" + $node_vm_01_name
-$pip_name_02        = "pip-" + $node_vm_02_name
-$pip_name_03        = "pip-" + $node_vm_03_name
-$pip_name_04        = "pip-" + $node_vm_04_name
+$node_vm_01_name        = "vm-pcmk-01" # node 01
+$node_vm_02_name        = "vm-pcmk-02" # node 02
+$node_vm_03_name        = "vm-pcmk-03" # node 03
+$node_vm_04_name        = "vm-pcmk-04" # test node 
 
-$nic_name_01        = "nic-pcmk-01"
-$nic_name_02        = "nic-pcmk-02"
-$nic_name_03        = "nic-pcmk-03"
-$nic_name_04        = "nic-pcmk-04"
+$pip_name_01            = "pip-" + $node_vm_01_name
+$pip_name_02            = "pip-" + $node_vm_02_name
+$pip_name_03            = "pip-" + $node_vm_03_name
+$pip_name_04            = "pip-" + $node_vm_04_name
 
-$avs_name           = "avs-pcmk-01"
-$nsg_name           = "nsg-pcmk-01"
-$ilb_name           = "lib-pcmk-01"
+$nic_name_01_01         = "nic-pcmk-01-01"
+$nic_name_01_02         = "nic-pcmk-01-02"
+$nic_name_02_01         = "nic-pcmk-02-01"
+$nic_name_02_02         = "nic-pcmk-02-02"
+$nic_name_03_01         = "nic-pcmk-03-01"
+$nic_name_03_02         = "nic-pcmk-03-02"
 
-$vnet_subnet_names  = "snt-pcmk-01"
-$vnet_name          = "vnt-pcmk-01"
-$vnet_ipaddr_space  = "192.168.1.0/24"
-$vnet_subnet_space  = "192.168.1.0/24"
+$avs_name               = "avs-pcmk-01"
+$nsg_name               = "nsg-pcmk-01"
+$ilb_name               = "lib-pcmk-01"
 
-$vip_01             = "192.168.1.10"
-$iip_01             = "192.168.1.11"
-$iip_02             = "192.168.1.12"
-$iip_03             = "192.168.1.13"
-$iip_04             = "192.168.1.14"
+$vnet_subnet_names_01   = "snt-pcmk-01"
+$vnet_subnet_names_02   = "snt-pcmk-02"
+$vnet_name              = "vnt-pcmk-01"
+$vnet_ipaddr_space      = "192.168.0.0/16"
+$vnet_subnet_space_01   = "192.168.1.0/24"
+$vnet_subnet_space_02   = "192.168.2.0/24"
+$vip_01                 = "192.168.1.10"
+
+$iip_01_01              = "192.168.1.11"
+$iip_02_01              = "192.168.1.12"
+$iip_03_01              = "192.168.1.13"
+$iip_04_01              = "192.168.1.14"
+
+$iip_01_02              = "192.168.2.11"
+$iip_02_02              = "192.168.2.12"
+$iip_03_02              = "192.168.2.13"
+$iip_04_02              = "192.168.2.14"
 
 ###############################################################################
 # Linux OS credential (user / pass) 
@@ -98,15 +113,20 @@ Write-Host $avs.Name created...
 
 Write-Host "creating virtual network..."
 $vnet_config_01 = New-AzVirtualNetworkSubnetConfig `
-    -Name $vnet_subnet_names `
-    -AddressPrefix $vnet_subnet_space
+    -Name $vnet_subnet_names_01 `
+    -AddressPrefix $vnet_subnet_space_01
+
+$vnet_config_02 = New-AzVirtualNetworkSubnetConfig `
+    -Name $vnet_subnet_names_02 `
+    -AddressPrefix $vnet_subnet_space_02
+
 
 $vnet = New-AzVirtualNetwork `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
     -Name $vnet_name `
     -AddressPrefix $vnet_ipaddr_space `
-    -Subnet $vnet_config_01
+    -Subnet $vnet_config_01, $vnet_config_02
 Write-Host $vnet.Name created...
 
 ###############################################################################
@@ -232,52 +252,102 @@ Write-Host $pip_04.Name created...
 # Network Interface Cards
 ###############################################################################
 
-$nic_01 = New-AzNetworkInterface `
-    -Name $nic_name_01 `
+# NIC 1-1
+$nic_01_01 = New-AzNetworkInterface `
+    -Name $nic_name_01_01 `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
     -PublicIpAddressId $pip_01.Id `
-    -PrivateIpAddress $iip_01 `
+    -PrivateIpAddress $iip_01_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id `
     -LoadBalancerBackendAddressPoolId $backend_config_01.Id
-Write-Host $nic_01.Name created...
+Write-Host $nic_01_01.Name created...
 
-$nic_02 = New-AzNetworkInterface `
-    -Name $nic_name_02 `
+# NIC 1-2
+$nic_01_02 = New-AzNetworkInterface `
+    -Name $nic_name_01_02 `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -SubnetId $vnet.Subnets[1].Id `
+    -PrivateIpAddress $iip_01_02 `
+    -EnableAcceleratedNetworking `
+    -NetworkSecurityGroupId $nsg.Id
+Write-Host $nic_01_02.Name created...
+
+# NIC 2-1
+$nic_02_01 = New-AzNetworkInterface `
+    -Name $nic_name_02_01 `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
     -PublicIpAddressId $pip_02.Id `
-    -PrivateIpAddress $iip_02 `
+    -PrivateIpAddress $iip_02_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id `
     -LoadBalancerBackendAddressPoolId $backend_config_01.Id
-Write-Host $nic_02.Name created...
+Write-Host $nic_02_01.Name created...
 
-$nic_03 = New-AzNetworkInterface `
-    -Name $nic_name_03 `
+# NIC 2-1
+Write-Host "Creating Network Interface 02-02..."    
+$nic_02_02 = New-AzNetworkInterface `
+    -Name $nic_name_02_02 `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -SubnetId $vnet.Subnets[1].Id `
+    -PrivateIpAddress $iip_02_02 `
+    -EnableAcceleratedNetworking `
+    -NetworkSecurityGroupId $nsg.Id
+Write-Host $nic_02_02.Name created...
+
+# NIC 3-1
+$nic_03_01 = New-AzNetworkInterface `
+    -Name $nic_name_03_01 `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
     -PublicIpAddressId $pip_03.Id `
-    -PrivateIpAddress $iip_03 `
+    -PrivateIpAddress $iip_03_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id `
     -LoadBalancerBackendAddressPoolId $backend_config_01.Id
-Write-Host $nic_03.Name created...
+Write-Host $nic_03_01.Name created...
 
-    $nic_04 = New-AzNetworkInterface `
+# NIC 3-2
+Write-Host "Creating Network Interface 02-02..."    
+$nic_03_02 = New-AzNetworkInterface `
+    -Name $nic_name_03_02 `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -SubnetId $vnet.Subnets[1].Id `
+    -PrivateIpAddress $iip_03_02 `
+    -EnableAcceleratedNetworking `
+    -NetworkSecurityGroupId $nsg.Id
+Write-Host $nic_03_02.Name created...
+
+# NIC 4-1
+$nic_04_01 = New-AzNetworkInterface `
     -Name $nic_name_04 `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
     -PublicIpAddressId $pip_04.Id `
-    -PrivateIpAddress $iip_04 `
+    -PrivateIpAddress $iip_04_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id
-Write-Host $nic_04.Name created...
+Write-Host $nic_04_01.Name created...
+
+# NIC 4-2
+$nic_04_02 = New-AzNetworkInterface `
+    -Name $nic_name_02 `
+    -Location $rsg_location `
+    -ResourceGroupName $rsg_name `
+    -SubnetId $vnet.Subnets[1].Id `
+    -PrivateIpAddress $iip_04_02 `
+    -EnableAcceleratedNetworking `
+    -NetworkSecurityGroupId $nsg.Id
+Write-Host $nic_04_02.Name created...
 
 ###############################################################################
 # Linux (Red Hat Enterprise 8.0) Virtual Machines
@@ -299,7 +369,9 @@ Set-AzVMSourceImage `
     -Skus $os_sku `
     -Version "latest" | `
 Add-AzVMNetworkInterface `
-    -Id $nic_01.Id -Primary 
+    -Id $nic_01_01.Id -Primary | `
+Add-AzVMNetworkInterface `
+    -Id $nic_01_02.Id
 New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
@@ -323,7 +395,9 @@ Set-AzVMSourceImage `
     -Skus $os_sku `
     -Version "latest" | `
 Add-AzVMNetworkInterface `
-    -Id $nic_02.Id -Primary 
+    -Id $nic_02_01.Id -Primary | `
+Add-AzVMNetworkInterface `
+    -Id $nic_02_02.Id
 New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
@@ -346,7 +420,9 @@ Set-AzVMSourceImage `
     -Skus $os_sku `
     -Version "latest" | `
 Add-AzVMNetworkInterface `
-    -Id $nic_03.Id -Primary 
+    -Id $nic_03_01.Id -Primary | `
+Add-AzVMNetworkInterface `
+    -id $nic_03_02.Id 
 New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
@@ -354,6 +430,7 @@ New-AzVM `
     -Zone $vm_zone `
     -AsJob
 
+# VM-04
 Write-Host "Creating VM-04... "
 $vm_config_04 = New-AzVMConfig `
     -VMName $node_vm_04_name `
@@ -369,7 +446,9 @@ Set-AzVMSourceImage `
     -Skus $os_sku `
     -Version "latest" | `
 Add-AzVMNetworkInterface `
-    -Id $nic_04.Id -Primary 
+    -Id $nic_04_01.Id -Primary | `
+Add-AzVMNetworkInterface `
+    -Id $nic_04_04.Id
 New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
@@ -378,7 +457,6 @@ New-AzVM `
     -AsJob
 
 Get-Job | Wait-Job
-
 Write-Host VMs created...
 
 ###############################################################################
@@ -389,8 +467,8 @@ $disk_config_01 = New-AzDiskConfig `
     -Location $rsg_location `
     -DiskSizeGB $vm_disksize `
     -AccountType UltraSSD_LRS `
-    -DiskIOPSReadWrite 16384 `
-    -DiskMBpsReadOnly  64 `
+    -DiskIOPSReadWrite $vm_disk_iops `
+    -DiskMBpsReadWrite $vm_disk_mbps `
     -CreateOption Empty `
     -MaxSharesCount 3 `
     -Zone $vm_zone    
