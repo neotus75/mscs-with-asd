@@ -9,13 +9,13 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 $rsg_name               = "asd-pcmk-resources"
 $rsg_location           = "southeastasia"
 
-# $os_offer             = "RHEL-HA"
-# $os_publisher         = "Redhat"
-# $os_sku               = "7.4"
+$os_offer             = "RHEL-HA"
+$os_publisher         = "Redhat"
+$os_sku               = "7.6"
 
-$os_offer               = "UbuntuServer"
-$os_publisher           = "Canonical"
-$os_sku                 = "18.04-LTS"
+#$os_offer               = "UbuntuServer"
+#$os_publisher           = "Canonical"
+#$os_sku                 = "18.04-LTS"
 
 $vm_sku                 = "Standard_d4s_v3"
 $vm_disksize            = 1024
