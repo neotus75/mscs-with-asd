@@ -525,7 +525,7 @@ $disk_config_01 = New-AzDiskConfig `
     -DiskSizeGB $disksize `
     -AccountType UltraSSD_LRS `
     -DiskIOPSReadWrite 16384 `
-    -DiskMBpsReadOnly  64 `
+    -DiskMBpsReadWrite  64 `
     -CreateOption Empty `
     -MaxSharesCount 2 `
     -Zone $zone    
