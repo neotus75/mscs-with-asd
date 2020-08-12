@@ -9,9 +9,9 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 $rsg_name               = "asd-pcmk-resources"
 $rsg_location           = "southeastasia"
 
-$os_offer             = "RHEL-HA"
-$os_publisher         = "Redhat"
-$os_sku               = "7.6"
+$os_offer               = "RHEL-HA"
+$os_publisher           = "Redhat"
+$os_sku                 = "7.6"
 
 #$os_offer               = "UbuntuServer"
 #$os_publisher           = "Canonical"
@@ -43,6 +43,8 @@ $nic_name_02_01         = "nic-pcmk-02-01"
 $nic_name_02_02         = "nic-pcmk-02-02"
 $nic_name_03_01         = "nic-pcmk-03-01"
 $nic_name_03_02         = "nic-pcmk-03-02"
+$nic_name_04_01         = "nic-pcmk-03-01"
+$nic_name_04_02         = "nic-pcmk-03-02"
 
 $avs_name               = "avs-pcmk-01"
 $nsg_name               = "nsg-pcmk-01"
@@ -328,7 +330,7 @@ Write-Host $nic_03_02.Name created...
 
 # NIC 4-1
 $nic_04_01 = New-AzNetworkInterface `
-    -Name $nic_name_04 `
+    -Name $nic_name_04_01 `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
@@ -340,7 +342,7 @@ Write-Host $nic_04_01.Name created...
 
 # NIC 4-2
 $nic_04_02 = New-AzNetworkInterface `
-    -Name $nic_name_02 `
+    -Name $nic_name_04_02 `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[1].Id `
@@ -448,7 +450,7 @@ Set-AzVMSourceImage `
 Add-AzVMNetworkInterface `
     -Id $nic_04_01.Id -Primary | `
 Add-AzVMNetworkInterface `
-    -Id $nic_04_04.Id
+    -Id $nic_04_02.Id
 New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
