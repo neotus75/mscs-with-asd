@@ -76,7 +76,8 @@ $iip_01_02              = "192.168.2.11"
 $iip_02_02              = "192.168.2.12"
 $iip_03_02              = "192.168.2.13"
 $iip_04_02              = "192.168.2.14"
-$iip_05_02              = "192.168.1.15"
+$iip_05_02              = "192.168.2.15"
+
 
 $vmConfigStorageAccountName = "csustorageaccountstdv2"
 $vmConfigStorageAccountKey = (Get-AzStorageAccountKey -ResourceGroupName csu-core-resources -Name $vmConfigStorageAccountName).Value[0]
