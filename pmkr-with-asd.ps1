@@ -94,7 +94,7 @@ $credential = Get-Credential
 # Resource Group 
 ###############################################################################
 
-Get-AzResourceGroup -Name $resourceGroupName -ErrorVariable doesNotExist -ErrorAction SilentlyContinue
+Get-AzResourceGroup -Name $rsg_name -ErrorVariable doesNotExist -ErrorAction SilentlyContinue
 
 if (!$doesNotExist) 
 {
