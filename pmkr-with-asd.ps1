@@ -6,7 +6,7 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 # Author: Patrick Shim (pashim@microsoft.com)
 # Copyright (c) Microsoft Corporation. All rights reserved
 
-$rsg_name               = "asd-pcmk-resources"
+$rsg_name               = "nfs-pcmk-resources"
 $rsg_location           = "southeastasia"
 
 $os_offer               = "RHEL-HA"
