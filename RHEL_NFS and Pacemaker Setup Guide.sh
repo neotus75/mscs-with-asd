@@ -8,8 +8,12 @@
 # Author: Patrick Shim (pashim@microsoft.com)
 # Copyright (c) Microsoft Corporation. All rights reserved
 ##########################################################################################
+### THIS IS NOT A PROPER SHELL SCRIPT.  THIS IS ONLY A CHEAT_SHEET.  YOU NEED TO COPY and 
+### PASTE LINE-BY-LINE TO FOLLOW
+##########################################################################################
 ### run on each nodes
 ##########################################################################################
+
 sudo -i
 
 yum update -y
