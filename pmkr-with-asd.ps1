@@ -269,6 +269,7 @@ Write-Host $ilb.Name created...
 ###############################################################################
 # Public IP Address
 ###############################################################################
+
 Write-Host "Creating public IP address (01)"   
 $pip_01 = New-AzPublicIpAddress `
     -ResourceGroupName $rsg_name `
@@ -691,4 +692,3 @@ Write-Host $node_vm_02_name "($pip_name_02, $iip_02_01)"
 Write-Host $node_vm_03_name "($pip_name_03, $iip_03_01)"
 Write-Host $node_vm_04_name "($pip_name_04, $iip_04_01)"
 Write-Host $node_vm_04_name "($pip_name_05, $iip_05_01)"
-
