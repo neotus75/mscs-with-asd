@@ -31,7 +31,7 @@ $sa_name                = "smbpcmkasd"
 $avs_name               = "pmkr-avs-01"
 $lb_probe               = 59998
 
-$node_vm_01_name        = "smb-pcmk-01" # node 01
+$node_vm_01_name        = "smb-vm-pcmk-01" # node 01
 $node_vm_02_name        = "smb-vm-pcmk-02" # node 02
 $node_vm_03_name        = "smb-vm-pcmk-03" # node 03
 $node_vm_04_name        = "smb-vm-pcmk-04" # test node 
