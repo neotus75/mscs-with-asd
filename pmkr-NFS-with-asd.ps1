@@ -6,7 +6,7 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 # Author: Patrick Shim (pashim@microsoft.com)
 # Copyright (c) Microsoft Corporation. All rights reserved
 
-$rsg_name               = "nfs-pcmk-resources"
+$rsg_name               = "nfs-pcmk-asd-resources"
 $rsg_location           = "southeastasia"
 
 $os_offer               = "RHEL-HA"
@@ -27,15 +27,15 @@ $vm_disk_iops           = 2048
 $vm_disk_mbps           = 16
 $vm_zone                = 3
 
-$sa_name                = "pcmkvmstgaccount"
+$sa_name                = "nfspcmkasd"
 $avs_name               = "pmkr-avs-01"
 $lb_probe               = 59998
 
-$node_vm_01_name        = "vm-pcmk-01" # node 01
-$node_vm_02_name        = "vm-pcmk-02" # node 02
-$node_vm_03_name        = "vm-pcmk-03" # node 03
-$node_vm_04_name        = "vm-pcmk-04" # test node 
-$node_vm_05_name        = "vm-pcmk-05" # test node 
+$node_vm_01_name        = "nfs-pcmk-01" # node 01
+$node_vm_02_name        = "nfs-vm-pcmk-02" # node 02
+$node_vm_03_name        = "nfs-vm-pcmk-03" # node 03
+$node_vm_04_name        = "nfs-vm-pcmk-04" # test node 
+$node_vm_05_name        = "nfs-vm-pcmk-05" # test node 
 
 $pip_name_01            = "pip-" + $node_vm_01_name
 $pip_name_02            = "pip-" + $node_vm_02_name
