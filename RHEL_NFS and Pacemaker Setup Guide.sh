@@ -20,11 +20,11 @@ yum update -y
 yum install pcs pacemaker fence-agents-azure-arm install nmap-ncat resource-agents -y
 
 ### add all nodes to /etc/hosts file
-echo "192.168.1.11 vm-pcmk-01" >> /etc/hosts
-echo "192.168.1.12 vm-pcmk-02" >> /etc/hosts
-echo "192.168.1.13 vm-pcmk-03" >> /etc/hosts
-echo "192.168.1.14 vm-pcmk-04" >> /etc/hosts
-echo "192.168.1.15 vm-pcmk-05" >> /etc/hosts
+echo "192.168.1.11 nfs-vm-pcmk-01" >> /etc/hosts
+echo "192.168.1.12 nfs-vm-pcmk-02" >> /etc/hosts
+echo "192.168.1.13 nfs-vm-pcmk-03" >> /etc/hosts
+echo "192.168.1.14 nfs-vm-pcmk-04" >> /etc/hosts
+echo "192.168.1.15 nfs-vm-pcmk-05" >> /etc/hosts
 
 ### set password for hacluster
 echo 'hacluster' | passwd --stdin hacluster
@@ -45,8 +45,8 @@ systemctl status pcsd.service
 ### run on only one node!!!
 ##########################################################################################
 
-pcs cluster auth vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
-pcs cluster setup --name vm-pcmk-cluster vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
+pcs cluster auth nfs-vm-pcmk-01 nfs-vm-pcmk-02 nfs-vm-pcmk-03
+pcs cluster setup --name nfs-pcmk-cluster nfs-vm-pcmk-01 nfs-vm-pcmk-02 nfs-vm-pcmk-03
 
 ### start pacemaker on all nodes
 pcs cluster enable --all
@@ -61,7 +61,7 @@ pcs cluster start --all
 
 ### this assumes you have azure cli on your linux box.   
 # az login
-# az ad sp create-for-rbac -n "rhel-pmkr-cluster" --role owner --scopes /subscriptions/<SUBSCRIPTION-ID>/resourceGroups/asd-pcmk-resources
+# az ad sp create-for-rbac -n "nfs-pmkr-cluster" --role owner --scopes /subscriptions/a370ff12-d748-4091-8749-a21c085d368f/resourceGroups/asd-pcmk-resources
 # {
 #   "appId": "714a1fd2-0d8f-4260-a979-xxxxxxxxxx",
 #   "displayName": "rhel-pmkr-cluster",
@@ -71,13 +71,13 @@ pcs cluster start --all
 # }
 
 ### copy and paste your app information and replace the value below to create cluster fencing
-fence_azure_arm -l 714a1fd2-0d8f-4260-a979-xxxxxxxxxx -p <APP_PASSWORD> --resourceGroup asd-pcmk-resources --tenantId 72f988bf-86f1-41af-91ab-xxxxxxxxxx --subscriptionId <SUB_ID> -o list
-pcs stonith create nfs_pcmk_stonith fence_azure_arm login=714a1fd2-0d8f-4260-a979-xxxxxxxxxx passwd=<APP_PASSWORD> resourceGroup=asd-pcmk-resources tenantId=72f988bf-86f1-41af-91ab-xxxxxxxxxx subscriptionId=<SUB_ID> pcmk_reboot_retries=3
+fence_azure_arm -l 714a1fd2-0d8f-4260-a979-xxxxxxxxxx -p <APP_PASSWORD> --resourceGroup nfs-pcmk-asd-resources --tenantId 72f988bf-86f1-41af-91ab-xxxxxxxxxx --subscriptionId <SUB_ID> -o list
+pcs stonith create nfs_pcmk_stonith fence_azure_arm login=714a1fd2-0d8f-4260-a979-xxxxxxxxxx passwd=<APP_PASSWORD> resourceGroup=nfs-pcmk-asd-resources tenantId=72f988bf-86f1-41af-91ab-xxxxxxxxxx subscriptionId=<SUB_ID> pcmk_reboot_retries=3
 
 ### test to make sure fencing works
-pcs stonith fence vm-pcmk-02
+pcs stonith fence nfs-vm-pcmk-02
 pcs status
-pcs cluster start vm-pcmk-02
+pcs cluster start nfs-vm-pcmk-02
 
 ### create partition on Azure Shared Disk (/dev/sdc) 
 fdisk /dev/sdc
@@ -96,7 +96,7 @@ mount /dev/pcmkvg/pcmklv /nfsshare
 ### test create a file
 mkdir -p /nfsshare/exports
 mkdir -p /nfsshare/exports/export
-touch /nfsshare/exports/export/clientdatafile
+touch /nfsshare/exports/export/test.txt
 
 ### tag volume group to pacemaker
 vgchange --addtag pacemaker /dev/pcmkvg
@@ -112,18 +112,19 @@ vgchange -an pcmkvg
 lvmconf --enable-halvm --services --startstopservices
 
 ### tag volume group to pacemaker (repeated on all nodes just to make sure)
+### unmount the volume and set activation flag
+umount /dev/pcmkvg/pcmklv
+vgchange -an pcmkvg
+
 vgchange --addtag pacemaker /dev/pcmkvg
 vgs -o vg_tags /dev/pcmkvg
 
-### add volume exclusion in lvm.conf file
-vim /etc/lvm/lvm.conf # ---> LINE 1240: volume_list = []
+### add volume exclusion in lvm.conf file (you can use sed command)
+vim /etc/lvm/lvm.conf # ---> LINE 1240: volume_list = ["rootvg"]
 
-
-##########################################################################################
-### There is a problem with the following command.  Do not run it,
-### and consult Red Hat Support
-### dracut -H -f /boot/initramfs-$(uname -r).img $(uname -r)
-##########################################################################################
+### rebuild initramfs once lvm.conf is modified
+cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r).img.$(date +%m-%d-%H%M%S).bak
+dracut -f -H -v /boot/initramfs-$(uname -r).img $(uname -r)
 
 # create probing port from Internal Load Balancer
 pcs resource create nfs-pcmk-ilb azure-lb port=59998 --group nfs-pcmk-resources

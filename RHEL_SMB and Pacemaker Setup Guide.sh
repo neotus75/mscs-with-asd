@@ -1,5 +1,5 @@
 ##########################################################################################
-### tested on RHEL 7.6
+### WORK IN PROGRESS!!!!!! RHEL 7.4
 ##########################################################################################
 # THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 # ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
@@ -20,11 +20,11 @@ yum update -y
 yum install pcs pacemaker fence-agents-azure-arm install nmap-ncat resource-agents -y
 
 ### add all nodes to /etc/hosts file
-echo "192.168.1.11 vm-pcmk-01" >> /etc/hosts
-echo "192.168.1.12 vm-pcmk-02" >> /etc/hosts
-echo "192.168.1.13 vm-pcmk-03" >> /etc/hosts
-echo "192.168.1.14 vm-pcmk-04" >> /etc/hosts
-echo "192.168.1.15 vm-pcmk-05" >> /etc/hosts
+echo "192.168.1.11 smb-vm-pcmk-01" >> /etc/hosts
+echo "192.168.1.12 smb-vm-pcmk-02" >> /etc/hosts
+echo "192.168.1.13 smb-vm-pcmk-03" >> /etc/hosts
+echo "192.168.1.14 smb-vm-pcmk-04" >> /etc/hosts
+echo "192.168.1.15 smb-vm-pcmk-05" >> /etc/hosts
 
 ### set password for hacluster
 echo 'hacluster' | passwd --stdin hacluster
@@ -45,8 +45,8 @@ systemctl status pcsd.service
 ### run on only one node!!!
 ##########################################################################################
 
-pcs cluster auth vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
-pcs cluster setup --name vm-pcmk-cluster vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
+pcs cluster auth smb-vm-pcmk-01 smb-vm-pcmk-02 smb-vm-pcmk-03
+pcs cluster setup --name smb-pcmk-cluster smb-vm-pcmk-01 smb-vm-pcmk-02 smb-vm-pcmk-03
 
 ### start pacemaker on all nodes
 pcs cluster enable --all
@@ -61,7 +61,7 @@ pcs cluster start --all
 
 ### this assumes you have azure cli on your linux box.   
 # az login
-# az ad sp create-for-rbac -n "rhel-pmkr-cluster" --role owner --scopes /subscriptions/<SUBSCRIPTION-ID>/resourceGroups/asd-pcmk-resources
+# az ad sp create-for-rbac -n "rhel-pmkr-cluster" --role owner --scopes /subscriptions/a370ff12-d748-4091-8749-a21c085d368f/resourceGroups/asd-pcmk-resources
 # {
 #   "appId": "714a1fd2-0d8f-4260-a979-xxxxxxxxxx",
 #   "displayName": "rhel-pmkr-cluster",
@@ -72,79 +72,42 @@ pcs cluster start --all
 
 ### copy and paste your app information and replace the value below to create cluster fencing
 fence_azure_arm -l 714a1fd2-0d8f-4260-a979-xxxxxxxxxx -p <APP_PASSWORD> --resourceGroup asd-pcmk-resources --tenantId 72f988bf-86f1-41af-91ab-xxxxxxxxxx --subscriptionId <SUB_ID> -o list
-pcs stonith create nfs_pcmk_stonith fence_azure_arm login=714a1fd2-0d8f-4260-a979-xxxxxxxxxx passwd=<APP_PASSWORD> resourceGroup=asd-pcmk-resources tenantId=72f988bf-86f1-41af-91ab-xxxxxxxxxx subscriptionId=<SUB_ID> pcmk_reboot_retries=3
+pcs stonith create smb_pcmk_stonith fence_azure_arm login=714a1fd2-0d8f-4260-a979-xxxxxxxxxx passwd=<APP_PASSWORD> resourceGroup=asd-pcmk-resources tenantId=72f988bf-86f1-41af-91ab-xxxxxxxxxx subscriptionId=<SUB_ID> pcmk_reboot_retries=3
 
 ### test to make sure fencing works
-pcs stonith fence vm-pcmk-02
+pcs stonith fence smb-vm-pcmk-02
 pcs status
-pcs cluster start vm-pcmk-02
+pcs cluster start smb-vm-pcmk-02
 
-### create partition on Azure Shared Disk (/dev/sdc) 
-fdisk /dev/sdc
 
-### create volume group, logical volume, and format it to ext4
-pvcreate /dev/sdc1
-vgcreate pcmkvg /dev/sdc1
-lvcreate -l 100%FREE -n pcmklv pcmkvg 
-lvs
-mkfs.ext4 /dev/pcmkvg/pcmklv
+yum install lvm2-cluster gfs2-utils -y
 
-### prep to create share directory for NFS service
-mkdir /nfsshare
-mount /dev/pcmkvg/pcmklv /nfsshare
+pcs property set no-quorum-policy=freeze
+pcs resource create smb-pcmk-dlm ocf:pacemaker:controld op monitor interval=30s on-fail=fence clone interleave=true ordered=true
+pcs resource create smb-pcmk-clvmd ocf:heartbeat:clvm op monitor interval=30s on-fail=fence clone interleave=true ordered=true
 
-### test create a file
-mkdir -p /nfsshare/exports
-mkdir -p /nfsshare/exports/export
-touch /nfsshare/exports/export/clientdatafile
+vim /etc/lvm/lvm.conf # LINE 777 locking_type = 3
 
-### tag volume group to pacemaker
-vgchange --addtag pacemaker /dev/pcmkvg
-vgs -o vg_tags /dev/pcmkvg
+cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r).img.$(date +%m-%d-%H%M%S).bak
+dracut -f -v
 
-### unmount the volume and set activation flag
-umount /dev/pcmkvg/pcmklv
-vgchange -an pcmkvg
+systemctl stop lvm2-lvmetad
+systemctl disable lvm2-lvmetad
+systemctl stop lvm2-lvmetad.socket
+systemctl disable lvm2-lvmetad.socket
 
-##########################################################################################
-### run on each nodes !!!
-##########################################################################################
-lvmconf --enable-halvm --services --startstopservices
+pcs constraint order start smb-pcmk-dlm-clone then smb-pcmk-clvmd-clone
+pcs constraint colocation add smb-pcmk-clvmd-clone with smb-pcmk-dlm-clone
 
-### tag volume group to pacemaker (repeated on all nodes just to make sure)
-vgchange --addtag pacemaker /dev/pcmkvg
-vgs -o vg_tags /dev/pcmkvg
+pvcreate /dev/sdc
+vgcreate -Ay -cy smb_pcmk_vg /dev/vdb
+lvcreate -L4G -n smb_pcmk_lv smb_pcmk_vg
 
-### add volume exclusion in lvm.conf file
-vim /etc/lvm/lvm.conf # ---> LINE 1240: volume_list = []
-
+systemctl stop lvm2-lvmetad
+systemctl disable lvm2-lvmetad
+systemctl stop lvm2-lvmetad.socket
+systemctl disable lvm2-lvmetad.socket
 
 ##########################################################################################
-### There is a problem with the following command.  Do not run it,
-### and consult Red Hat Support
-### dracut -H -f /boot/initramfs-$(uname -r).img $(uname -r)
+### WORK IN PROGRESS
 ##########################################################################################
-
-# create probing port from Internal Load Balancer
-pcs resource create nfs-pcmk-ilb azure-lb port=59998 --group nfs-pcmk-resources
-
-# create virtual IP for NFS server
-pcs resource create nfs-pcmk-vip IPaddr2 ip="192.168.1.10" --group nfs-pcmk-resources
-
-# create logical volume manager for pcmk volume group
-pcs resource create nfs-pcmk-lvm LVM volgrpname=pcmkvg exclusive=true --group nfs-pcmk-resources
-
-# create file system on logical volume 
-pcs resource create nfs-share Filesystem device=/dev/pcmkvg/pcmklv directory=/nfsshare fstype=ext4 --group nfs-pcmk-resources
-
-# create nfs-daemon 
-pcs resource create nfs-daemon nfsserver nfs_shared_infodir=/nfsshare/nfsinfo nfs_no_notify=true --group nfs-pcmk-resources
-
-# create root export to to allow sharing to the network
-pcs resource create nfs-pcmk-root exportfs clientspec=192.168.1.0/255.255.255.0 options=rw,sync,no_root_squash directory=/nfsshare/exports fsid=0 --group nfs-pcmk-resources
-
-# create client export to to allow sharing to the network
-pcs resource create nfs-pcmk-export exportfs clientspec=192.168.1.0/255.255.255.0 options=rw,sync,no_root_squash directory=/nfsshare/exports/export fsid=1 --group nfs-pcmk-resources
-
-# create nfs notification
-pcs resource create nfs-pcmk-notify nfsnotify source_host=192.168.1.10 --group nfs-pcmk-resources

@@ -11,7 +11,7 @@ $rsg_location           = "southeastasia"
 
 $os_offer               = "RHEL-HA"
 $os_publisher           = "Redhat"
-$os_sku                 = "7.6"
+$os_sku                 = "7.4"
 
 $win_os_offer           = "WindowsServer"
 $win_os_publisher       = "MicrosoftWindowsServer"
