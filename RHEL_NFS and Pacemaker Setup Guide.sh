@@ -11,11 +11,11 @@
 ### THIS IS NOT A PROPER SHELL SCRIPT.  THIS IS ONLY A CHEAT_SHEET.  YOU NEED TO COPY and 
 ### PASTE LINE-BY-LINE TO FOLLOW
 ##########################################################################################
+
+##########################################################################################
 ### run on each nodes
 ##########################################################################################
-
 sudo -i
-
 yum update -y
 yum install pcs pacemaker fence-agents-azure-arm install nmap-ncat resource-agents -y
 
@@ -42,7 +42,7 @@ systemctl enable pcsd.service
 systemctl status pcsd.service
 
 ##########################################################################################
-### run on only one node!!!
+### run on node 1
 ##########################################################################################
 
 pcs cluster auth vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
@@ -60,31 +60,26 @@ baseurl=https://packages.microsoft.com/yumrepos/azure-cli
 enabled=1
 gpgcheck=1
 gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/azure-cli.repo
-sudo yum install azure-cli
+sudo yum install azure-cli -y
 
 az login
-az ad sp create-for-rbac -n "pcmk-nfs-cluster" --role owner --scopes /subscriptions/<subId>/resourceGroups/<resourceGroupName> # your sub ID and resource group
+az ad sp create-for-rbac -n "pcmk-nfs-cluster" --role owner --scopes /subscriptions/<subId>/resourceGroups/<Resource Group> # your sub ID and resource group
 
 ### this assumes you have azure cli on your linux box.   
-# {
-#  "appId": "",
-#  "displayName": "nfs-pcmk-cluster",
-#  "name": "http://nfs-pcmk-cluster",
-#  "password": "",
-#  "tenant": ""
-# }
+{
+  "appId": "<appId>",
+  "displayName": "pcmk-nfs-cluster",
+  "name": "http://pcmk-nfs-cluster",
+  "password": "<pass>",
+  "tenant": "<tenantId>"
+}
 
 ### copy and paste your app information and replace the value below to create cluster fencing
-fence_azure_arm -l <appId> -p <passwd> --resourceGroup nfs-pcmk-asd-resources --tenantId <tenantId> --subscriptionId <subId> -o list
+fence_azure_arm -l <appId> -p <passwd> --resourceGroup nfs-pcmk-asd-resources --tenantId <tenantId> --subscriptionId <subscriptionId> -o list
 pcs stonith create nfs_pcmk_stonith fence_azure_arm login=<appId> passwd=<passwd> resourceGroup=nfs-pcmk-asd-resources tenantId=<tenantId> subscriptionId=<subId> pcmk_reboot_retries=3
 
-### test to make sure fencing works
-pcs stonith fence vm-pcmk-02
-pcs status
-pcs cluster start vm-pcmk-02
-
 ### create partition on Azure Shared Disk (/dev/sdc) 
-fdisk /dev/sdc # n -> p -> w
+fdisk /dev/sdc # n -> p -> w -> default sizes
 
 ### create volume group, logical volume, and format it to ext4
 pvcreate /dev/sdc1
@@ -115,13 +110,9 @@ vgchange -an pcmkvg
 ##########################################################################################
 lvmconf --enable-halvm --services --startstopservices
 
-### tag volume group to pacemaker (repeated on all nodes just to make sure)
-### unmount the volume and set activation flag
-umount /dev/pcmkvg/pcmklv
-vgchange -an pcmkvg
-
-vgchange --addtag pacemaker /dev/pcmkvg
-vgs -o vg_tags /dev/pcmkvg
+##########################################################################################
+### run on node 1
+##########################################################################################
 
 ### add volume exclusion in lvm.conf file (you can use sed command)
 vim /etc/lvm/lvm.conf # ---> LINE 1240: volume_list = ["rootvg"]
