@@ -1,5 +1,5 @@
 ##########################################################################################
-### tested on RHEL 7.6
+### tested on RHEL 7.7
 ##########################################################################################
 # THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 # ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
@@ -20,11 +20,11 @@ yum update -y
 yum install pcs pacemaker fence-agents-azure-arm install nmap-ncat resource-agents -y
 
 ### add all nodes to /etc/hosts file
-echo "192.168.1.11 nfs-vm-pcmk-01" >> /etc/hosts
-echo "192.168.1.12 nfs-vm-pcmk-02" >> /etc/hosts
-echo "192.168.1.13 nfs-vm-pcmk-03" >> /etc/hosts
-echo "192.168.1.14 nfs-vm-pcmk-04" >> /etc/hosts
-echo "192.168.1.15 nfs-vm-pcmk-05" >> /etc/hosts
+echo "192.168.1.11 vm-pcmk-01" >> /etc/hosts
+echo "192.168.1.12 vm-pcmk-02" >> /etc/hosts
+echo "192.168.1.13 vm-pcmk-03" >> /etc/hosts
+echo "192.168.1.14 vm-pcmk-04" >> /etc/hosts
+echo "192.168.1.15 vm-pcmk-05" >> /etc/hosts
 
 ### set password for hacluster
 echo 'hacluster' | passwd --stdin hacluster
@@ -45,42 +45,46 @@ systemctl status pcsd.service
 ### run on only one node!!!
 ##########################################################################################
 
-pcs cluster auth nfs-vm-pcmk-01 nfs-vm-pcmk-02 nfs-vm-pcmk-03
-pcs cluster setup --name nfs-pcmk-cluster nfs-vm-pcmk-01 nfs-vm-pcmk-02 nfs-vm-pcmk-03
+pcs cluster auth vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
+pcs cluster setup --name pcmk-nfs-cluster vm-pcmk-01 vm-pcmk-02 vm-pcmk-03
 
 ### start pacemaker on all nodes
 pcs cluster enable --all
 pcs cluster start --all
 
-##########################################################################################
-### azure-cli installation only works on RHEL 7.7 and above.  
-### rpm --import https://packages.microsoft.com/keys/microsoft.asc
-### sh -c 'echo -e "[azure-cli] name=Azure CLI baseurl=https://packages.microsoft.com/yumrepos/azure-cli enabled=1 gpgcheck=1 gpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo'
-### yum install azure-cli
-##########################################################################################
+### install azure-cli for fence agent creation on azure AD
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+echo -e "[azure-cli]
+name=Azure CLI
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/azure-cli.repo
+sudo yum install azure-cli
+
+az login
+az ad sp create-for-rbac -n "pcmk-nfs-cluster" --role owner --scopes /subscriptions/<subId>/resourceGroups/<resourceGroupName> # your sub ID and resource group
 
 ### this assumes you have azure cli on your linux box.   
-# az login
-# az ad sp create-for-rbac -n "nfs-pmkr-cluster" --role owner --scopes /subscriptions/a370ff12-d748-4091-8749-a21c085d368f/resourceGroups/asd-pcmk-resources
 # {
-#   "appId": "714a1fd2-0d8f-4260-a979-xxxxxxxxxx",
-#   "displayName": "rhel-pmkr-cluster",
-#   "name": "http://rhel-pmkr-cluster",
-#   "password": "<APP_PASSWORD>",
-#   "tenant": "72f988bf-86f1-41af-91ab-xxxxxxxxxx"
+#  "appId": "",
+#  "displayName": "nfs-pcmk-cluster",
+#  "name": "http://nfs-pcmk-cluster",
+#  "password": "",
+#  "tenant": ""
 # }
 
 ### copy and paste your app information and replace the value below to create cluster fencing
-fence_azure_arm -l 714a1fd2-0d8f-4260-a979-xxxxxxxxxx -p <APP_PASSWORD> --resourceGroup nfs-pcmk-asd-resources --tenantId 72f988bf-86f1-41af-91ab-xxxxxxxxxx --subscriptionId <SUB_ID> -o list
-pcs stonith create nfs_pcmk_stonith fence_azure_arm login=714a1fd2-0d8f-4260-a979-xxxxxxxxxx passwd=<APP_PASSWORD> resourceGroup=nfs-pcmk-asd-resources tenantId=72f988bf-86f1-41af-91ab-xxxxxxxxxx subscriptionId=<SUB_ID> pcmk_reboot_retries=3
+fence_azure_arm -l <appId> -p <passwd> --resourceGroup nfs-pcmk-asd-resources --tenantId <tenantId> --subscriptionId <subId> -o list
+pcs stonith create nfs_pcmk_stonith fence_azure_arm login=<appId> passwd=<passwd> resourceGroup=nfs-pcmk-asd-resources tenantId=<tenantId> subscriptionId=<subId> pcmk_reboot_retries=3
 
 ### test to make sure fencing works
-pcs stonith fence nfs-vm-pcmk-02
+pcs stonith fence vm-pcmk-02
 pcs status
-pcs cluster start nfs-vm-pcmk-02
+pcs cluster start vm-pcmk-02
 
 ### create partition on Azure Shared Disk (/dev/sdc) 
-fdisk /dev/sdc
+fdisk /dev/sdc # n -> p -> w
 
 ### create volume group, logical volume, and format it to ext4
 pvcreate /dev/sdc1
