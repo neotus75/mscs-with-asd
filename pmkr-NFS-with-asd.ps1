@@ -221,34 +221,11 @@ $nsg_config_05 = New-azNetworkSecurityRuleConfig `
     -DestinationPortRange * `
     -Access Allow
 
-$nsg_config_06 = New-AzNetworkSecurityRuleConfig `
-    -Name "AzureRestAPIs" `
-    -Protocol * `
-    -SourceAddressPrefix * `
-    -SourcePortRange * `
-    -DestinationPortRange * `
-    -DestinationAddressPrefix "AzureCloud" `
-    -Priority 101 `
-    -Direction Outbound `
-    -Access Allow
-
-$nsg_config_07 = New-AzNetworkSecurityRuleConfig `
-    -Name "DenyInternet" `
-    -Protocol * `
-    -SourceAddressPrefix * `
-    -SourcePortRange * `
-    -DestinationPortRange * `
-    -DestinationAddressPrefix "Internet" `
-    -Priority 1000 `
-    -Direction Outbound `
-    -Access Deny
-
-
 $nsg = New-AzNetworkSecurityGroup `
     -Name $nsg_name `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
-    -SecurityRules $nsg_config_01, $nsg_config_02, $nsg_config_03, $nsg_config_04, $nsg_config_05, $nsg_config_06, $nsg_config_07
+    -SecurityRules $nsg_config_01, $nsg_config_02, $nsg_config_03, $nsg_config_04, $nsg_config_05
 Write-Host $nsg.Name created...
 
 ###############################################################################
@@ -732,6 +709,40 @@ Update-AzVM -VM $node_vm_02 -ResourceGroupName $rsg_name
 Update-AzVM -VM $node_vm_03 -ResourceGroupName $rsg_name
 
 Write-Host Attaching $dsk.Name to virtual machines completed...
+
+# configures NSG to accomodate the second LIB - blocking Internet, allowing AzCloud, etc
+
+$nsg_config_06 = New-AzNetworkSecurityRuleConfig `
+    -Name "AzureRestAPIs" `
+    -Protocol * `
+    -SourceAddressPrefix * `
+    -SourcePortRange * `
+    -DestinationPortRange * `
+    -DestinationAddressPrefix "AzureCloud" `
+    -Priority 101 `
+    -Direction Outbound `
+    -Access Allow
+
+$nsg_config_07 = New-AzNetworkSecurityRuleConfig `
+    -Name "DenyInternet" `
+    -Protocol * `
+    -SourceAddressPrefix * `
+    -SourcePortRange * `
+    -DestinationPortRange * `
+    -DestinationAddressPrefix "Internet" `
+    -Priority 1000 `
+    -Direction Outbound `
+    -Access Deny
+
+$nsg = New-AzNetworkSecurityGroup `
+    -Name $nsg_name `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -SecurityRules $nsg_config_01, $nsg_config_02, $nsg_config_03, $nsg_config_04, $nsg_config_05, $nsg_config_06, $nsg_config_07
+
+Write-Host $nsg.Name updated...
+
+# displays the completion message
 
 Write-Host "##### The following VMs created #####"
 Write-Host $node_vm_01_name "($pip_name_01, $iip_01_01)"
