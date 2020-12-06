@@ -1,4 +1,6 @@
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+# Connect-AzAccount
+
 # THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 # ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
@@ -7,28 +9,23 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 # Copyright (c) Microsoft Corporation. All rights reserved
 
 $rsg_name               = "smb-pcmk-asd-resources"
-$rsg_location           = "southeastasia"
+$rsg_location           = "koreacentral"
 
-$os_offer               = "RHEL-HA"
+$os_offer               = "RHEL-SAP-HA"
 $os_publisher           = "Redhat"
-$os_sku                 = "7.4"
+$os_sku                 = "7.7"
 
 $win_os_offer           = "WindowsServer"
 $win_os_publisher       = "MicrosoftWindowsServer"
 $win_os_sku             = "2016-Datacenter"
 
-#$os_offer               = "UbuntuServer"
-#$os_publisher           = "Canonical"
-#$os_sku                 = "18.04-LTS"
-
 $vm_sku                 = "Standard_d4s_v3"
 $vm_disksize            = 1024
 $vm_disk_iops           = 2048
 $vm_disk_mbps           = 16
-$vm_zone                = 3
 
-$sa_name                = "smbpcmkasd"
-$avs_name               = "pmkr-avs-01"
+$sa_name                = "smbpcmkashareddisk"
+$avs_name               = "pcmk-avs-01"
 $lb_probe               = 59998
 
 $node_vm_01_name        = "smb-vm-pcmk-01" # node 01
@@ -37,6 +34,10 @@ $node_vm_03_name        = "smb-vm-pcmk-03" # node 03
 $node_vm_04_name        = "smb-vm-pcmk-04" # test node 
 $node_vm_05_name        = "smb-vm-pcmk-05" # test node 
 
+$plb_01_name           = "smb-plb-pcmk-01" # load balancer (internal lb)
+$ilb_01_name           = "smb-ilb-pcmk-01" # load balancer (for public routing)
+
+$pip_name_00            = "pip-" + $plb_01_name #(for public lb)
 $pip_name_01            = "pip-" + $node_vm_01_name
 $pip_name_02            = "pip-" + $node_vm_02_name
 $pip_name_03            = "pip-" + $node_vm_03_name
@@ -56,7 +57,6 @@ $nic_name_05_02         = "nic-pcmk-05-02"
 
 $avs_name               = "avs-pcmk-01"
 $nsg_name               = "nsg-pcmk-01"
-$ilb_name               = "lib-pcmk-01"
 
 $vnet_subnet_names_01   = "snt-pcmk-01"
 $vnet_subnet_names_02   = "snt-pcmk-02"
@@ -224,8 +224,72 @@ $nsg = New-AzNetworkSecurityGroup `
     -SecurityRules $nsg_config_01, $nsg_config_02, $nsg_config_03, $nsg_config_04, $nsg_config_05
 Write-Host $nsg.Name created...
 
+###############################################################################
+# Public IP Address
+###############################################################################
+
+Write-Host "Creating public IP address (00)"   
+$pip_00 = New-AzPublicIpAddress `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location -Sku Standard `
+    -IpAddressVersion IPv4 `
+    -AllocationMethod Static `
+    -name $pip_name_00
+Write-Host $pip_00.Name created...
+
+Write-Host "Creating public IP address (01)"   
+$pip_01 = New-AzPublicIpAddress `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location -Sku Standard `
+    -IpAddressVersion IPv4 `
+    -AllocationMethod Static `
+    -name $pip_name_01
+Write-Host $pip_01.Name created...
+
+Write-Host "Creating public IP address (02)"  
+$pip_02 = New-AzPublicIpAddress `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -Sku Standard `
+    -IpAddressVersion IPv4 `
+    -AllocationMethod Static `
+    -name $pip_name_02
+Write-Host $pip_02.Name created...
+
+Write-Host "Creating public IP address (03)"  
+$pip_03 = New-AzPublicIpAddress `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -Sku Standard `
+    -IpAddressVersion IPv4 `
+    -AllocationMethod Static `
+    -name $pip_name_03
+Write-Host $pip_03.Name created...
+
+Write-Host "Creating public IP address (04)"  
+$pip_04 = New-AzPublicIpAddress `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -Sku Standard  `
+    -IpAddressVersion IPv4 `
+    -AllocationMethod Static `
+    -name $pip_name_04 `
+    -DomainNameLabel $pip_name_04
+Write-Host $pip_04.Name created...
+
+Write-Host "Creating public IP address (05)"  
+$pip_05 = New-AzPublicIpAddress `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -Sku Standard  `
+    -AllocationMethod Static `
+    -IpAddressVersion IPv4 `
+    -name $pip_name_05 `
+    -DomainNameLabel $pip_name_05
+Write-Host $pip_05.Name created...
+
 ######################################################################
-#### Azure Load Balancers 
+#### Azure Load Balancers 01 (INTERNAL)
 ######################################################################
 
 $frontend_config_01 = New-AzLoadBalancerFrontEndIpConfig `
@@ -254,9 +318,9 @@ $rule_config_01 = New-AzLoadBalancerRuleConfig `
     -FrontendIpConfigurationId $frontend_config_01.Id `
     -ProbeId $probe_config_01.Id
     
-$ilb = New-AzLoadBalancer `
+$ilb_01 = New-AzLoadBalancer `
     -ResourceGroupName $rsg_name `
-    -Name $ilb_name `
+    -Name $ilb_01_name `
     -Location $rsg_location `
     -Sku Standard `
     -FrontendIpConfiguration $frontend_config_01 `
@@ -264,69 +328,38 @@ $ilb = New-AzLoadBalancer `
     -LoadBalancingRule $rule_config_01 `
     -Probe $probe_config_01 `
     -Force:$true
-Write-Host $ilb.Name created...
+Write-Host $ilb_01.Name created...
 
-###############################################################################
-# Public IP Address
-###############################################################################
+######################################################################
+#### Azure Load Balancers 01 (PUBLIC)
+######################################################################
 
-Write-Host "Creating public IP address (01)"   
-$pip_01 = New-AzPublicIpAddress `
+$frontend_config_02 = New-AzLoadBalancerFrontEndIpConfig `
+    -Name "frontend_01" `
+    -PublicIpAddress $pip_00
+
+$backend_config_02 = New-AzLoadBalancerBackendAddressPoolConfig `
+    -Name "backend_01"
+
+$rule_config_02 = New-AzLoadBalancerOutboundRuleConfig `
+    -Name "rule_01" `
+    -BackendAddressPool $backend_config_02 `
+    -FrontendIpConfiguration $frontend_config_02 `
+    -IdleTimeoutInMinutes 4 `
+    -EnableTcpReset `
+    -Protocol All `
+    -AllocatedOutboundPort 10000 `
+
+$plb_01 = New-AzLoadBalancer `
     -ResourceGroupName $rsg_name `
-    -Location $rsg_location -Sku Standard `
-    -AllocationMethod Static `
-    -IpAddressVersion IPv4 `
-    -name $pip_name_01 `
-    -DomainNameLabel $pip_name_01
-Write-Host $pip_01.Name created...
-
-Write-Host "Creating public IP address (02)"  
-$pip_02 = New-AzPublicIpAddress `
-    -ResourceGroupName $rsg_name `
+    -Name $plb_01_name `
     -Location $rsg_location `
     -Sku Standard `
-    -AllocationMethod Static `
-    -IpAddressVersion IPv4 `
-    -name $pip_name_02 `
-    -DomainNameLabel $pip_name_02
-Write-Host $pip_02.Name created...
+    -FrontendIpConfiguration $frontend_config_02 `
+    -BackendAddressPool $backend_config_02 `
+    -OutboundRule $rule_config_02
 
-Write-Host "Creating public IP address (03)"  
-$pip_03 = New-AzPublicIpAddress `
-    -ResourceGroupName $rsg_name `
-    -Location $rsg_location `
-    -Sku Standard `
-    -AllocationMethod Static `
-    -IpAddressVersion IPv4 `
-    -name $pip_name_03 `
-    -DomainNameLabel $pip_name_03
-Write-Host $pip_03.Name created...
-
-Write-Host "Creating public IP address (04)"  
-$pip_04 = New-AzPublicIpAddress `
-    -ResourceGroupName $rsg_name `
-    -Location $rsg_location `
-    -Sku Standard  `
-    -AllocationMethod Static `
-    -IpAddressVersion IPv4 `
-    -name $pip_name_04 `
-    -DomainNameLabel $pip_name_04
-Write-Host $pip_04.Name created...
-
-Write-Host "Creating public IP address (05)"  
-$pip_05 = New-AzPublicIpAddress `
-    -ResourceGroupName $rsg_name `
-    -Location $rsg_location `
-    -Sku Standard  `
-    -AllocationMethod Static `
-    -IpAddressVersion IPv4 `
-    -name $pip_name_05 `
-    -DomainNameLabel $pip_name_05
-Write-Host $pip_05.Name created...
-
-###############################################################################
-# Network Interface Cards
-###############################################################################
+Write-Host $plb_01.Name created...
 
 # NIC 1-1
 Write-Host "Creating Network Interface 01-01..."   
@@ -335,11 +368,10 @@ $nic_01_01 = New-AzNetworkInterface `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
-    -PublicIpAddressId $pip_01.Id `
     -PrivateIpAddress $iip_01_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id `
-    -LoadBalancerBackendAddressPoolId $backend_config_01.Id
+    -LoadBalancerBackendAddressPoolId $backend_config_01.Id, $backend_config_02.Id 
 Write-Host $nic_01_01.Name created...
 
 # NIC 1-2
@@ -361,11 +393,10 @@ $nic_02_01 = New-AzNetworkInterface `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
-    -PublicIpAddressId $pip_02.Id `
     -PrivateIpAddress $iip_02_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id `
-    -LoadBalancerBackendAddressPoolId $backend_config_01.Id
+    -LoadBalancerBackendAddressPoolId $backend_config_01.Id, $backend_config_02.Id
 Write-Host $nic_02_01.Name created...
 
 # NIC 2-2
@@ -387,11 +418,10 @@ $nic_03_01 = New-AzNetworkInterface `
     -Location $rsg_location `
     -ResourceGroupName $rsg_name `
     -SubnetId $vnet.Subnets[0].Id `
-    -PublicIpAddressId $pip_03.Id `
     -PrivateIpAddress $iip_03_01 `
     -EnableAcceleratedNetworking `
     -NetworkSecurityGroupId $nsg.Id `
-    -LoadBalancerBackendAddressPoolId $backend_config_01.Id
+    -LoadBalancerBackendAddressPoolId $backend_config_01.Id, $backend_config_02.Id
 Write-Host $nic_03_01.Name created...
 
 # NIC 3-2
@@ -441,7 +471,7 @@ $nic_05_01 = New-AzNetworkInterface `
     -PublicIpAddressId $pip_05.Id `
     -PrivateIpAddress $iip_05_01 `
     -EnableAcceleratedNetworking `
-    -NetworkSecurityGroupId $nsg.Id
+    -NetworkSecurityGroupId $nsg.Id 
 Write-Host $nic_05_01.Name created...
 
 # NIC 5-2
@@ -464,8 +494,7 @@ Write-Host $nic_05_02.Name created...
 Write-Host "Creating VM-01... "
 $vm_config_01 = New-AzVMConfig `
     -VMName $node_vm_01_name `
-    -VMSize $vm_sku `
-    -Zone $vm_zone | `
+    -VMSize $vm_sku | `
 Set-AzVMOperatingSystem `
     -Linux `
     -ComputerName $node_vm_01_name `
@@ -483,15 +512,13 @@ New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
     -VM $vm_config_01 `
-    -Zone $vm_zone `
     -AsJob
 
 # VM-02
 Write-Host "Creating VM-02... "
 $vm_config_02 = New-AzVMConfig `
     -VMName $node_vm_02_name `
-    -VMSize $vm_sku `
-    -Zone $vm_zone | `
+    -VMSize $vm_sku | `
 Set-AzVMOperatingSystem `
     -Linux `
     -ComputerName $node_vm_02_name `
@@ -509,14 +536,13 @@ New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
     -VM $vm_config_02 `
-    -Zone $vm_zone `
     -AsJob
 
 # VM-03
 Write-Host "Creating VM-03... "
 $vm_config_03 = New-AzVMConfig `
     -VMName $node_vm_03_name `
-    -VMSize $vm_sku -Zone $vm_zone | `
+    -VMSize $vm_sku | `
 Set-AzVMOperatingSystem `
     -Linux `
     -ComputerName $node_vm_03_name `
@@ -534,15 +560,13 @@ New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
     -VM $vm_config_03 `
-    -Zone $vm_zone `
     -AsJob
 
 # VM-04
 Write-Host "Creating VM-04... "
 $vm_config_04 = New-AzVMConfig `
     -VMName $node_vm_04_name `
-    -VMSize $vm_sku `
-    -Zone $vm_zone | `
+    -VMSize $vm_sku | `
 Set-AzVMOperatingSystem `
     -Linux `
     -ComputerName $node_vm_04_name `
@@ -560,15 +584,13 @@ New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
     -VM $vm_config_04 `
-    -Zone $vm_zone `
     -AsJob
 
 # VM-05
 Write-Host "Creating VM-05... "
 $vm_config_05 = New-AzVMConfig `
     -VMName $node_vm_05_name `
-    -VMSize $vm_sku `
-    -Zone $vm_zone | `
+    -VMSize $vm_sku | `
 Set-AzVMOperatingSystem `
     -Windows `
     -ComputerName $node_vm_05_name `
@@ -586,7 +608,6 @@ New-AzVM `
     -ResourceGroupName $rsg_name `
     -Location $rsg_location `
     -VM $vm_config_05 `
-    -Zone $vm_zone `
     -AsJob
 
 Get-Job | Wait-Job
@@ -636,8 +657,7 @@ $disk_config_01 = New-AzDiskConfig `
     -DiskIOPSReadWrite $vm_disk_iops `
     -DiskMBpsReadWrite $vm_disk_mbps `
     -CreateOption Empty `
-    -MaxSharesCount 3 `
-    -Zone $vm_zone    
+    -MaxSharesCount 3 
 $dsk = New-AzDisk -ResourceGroupName $rsg_name -DiskName 'disk_01' -Disk $disk_config_01
 Write-Host $dsk.Name created...
 
@@ -685,6 +705,40 @@ Update-AzVM -VM $node_vm_02 -ResourceGroupName $rsg_name
 Update-AzVM -VM $node_vm_03 -ResourceGroupName $rsg_name
 
 Write-Host Attaching $dsk.Name to virtual machines completed...
+
+# configures NSG to accomodate the second LIB - blocking Internet, allowing AzCloud, etc
+
+$nsg_config_06 = New-AzNetworkSecurityRuleConfig `
+    -Name "AzureRestAPIs" `
+    -Protocol * `
+    -SourceAddressPrefix * `
+    -SourcePortRange * `
+    -DestinationPortRange * `
+    -DestinationAddressPrefix "AzureCloud" `
+    -Priority 101 `
+    -Direction Outbound `
+    -Access Allow
+
+$nsg_config_07 = New-AzNetworkSecurityRuleConfig `
+    -Name "DenyInternet" `
+    -Protocol * `
+    -SourceAddressPrefix * `
+    -SourcePortRange * `
+    -DestinationPortRange * `
+    -DestinationAddressPrefix "Internet" `
+    -Priority 1000 `
+    -Direction Outbound `
+    -Access Deny
+
+$nsg = New-AzNetworkSecurityGroup `
+    -Name $nsg_name `
+    -ResourceGroupName $rsg_name `
+    -Location $rsg_location `
+    -SecurityRules $nsg_config_01, $nsg_config_02, $nsg_config_03, $nsg_config_04, $nsg_config_05, $nsg_config_06, $nsg_config_07
+
+Write-Host $nsg.Name updated...
+
+# displays the completion message
 
 Write-Host "##### The following VMs created #####"
 Write-Host $node_vm_01_name "($pip_name_01, $iip_01_01)"

@@ -70,13 +70,13 @@ az ad sp create-for-rbac -n "pcmk-nfs-cluster" --role owner --scopes /subscripti
   "appId": "7e35bb0b-1fe4-4b5d-b759-5198065ac0d1",
   "displayName": "pcmk-nfs-cluster",
   "name": "http://pcmk-nfs-cluster",
-  "password": "YilNOOqMDmEVbR.n8YUijg2XGHh_9gCsIO",
+  "password": "5mbicQCGX6IpfSEi~hMn6rW3aInTovmqGR",
   "tenant": "72f988bf-86f1-41af-91ab-2d7cd011db47"
 }
 
 ### copy and paste your app information and replace the value below to create cluster fencing
-fence_azure_arm -l 7e35bb0b-1fe4-4b5d-b759-5198065ac0d1 -p YilNOOqMDmEVbR.n8YUijg2XGHh_9gCsIO --resourceGroup nfs-pcmk-asd-resources --tenantId 72f988bf-86f1-41af-91ab-2d7cd011db47 --subscriptionId a370ff12-d748-4091-8749-a21c085d368f -o list
-pcs stonith create nfs_pcmk_stonith fence_azure_arm login=7e35bb0b-1fe4-4b5d-b759-5198065ac0d1 passwd=YilNOOqMDmEVbR.n8YUijg2XGHh_9gCsIO resourceGroup=nfs-pcmk-asd-resources tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47 subscriptionId=a370ff12-d748-4091-8749-a21c085d368f pcmk_reboot_retries=3
+fence_azure_arm -l 7e35bb0b-1fe4-4b5d-b759-5198065ac0d1 -p 5mbicQCGX6IpfSEi~hMn6rW3aInTovmqGR --resourceGroup nfs-pcmk-asd-resources --tenantId 72f988bf-86f1-41af-91ab-2d7cd011db47 --subscriptionId a370ff12-d748-4091-8749-a21c085d368f -o list
+pcs stonith create nfs_pcmk_stonith fence_azure_arm login=7e35bb0b-1fe4-4b5d-b759-5198065ac0d1 passwd=5mbicQCGX6IpfSEi~hMn6rW3aInTovmqGR resourceGroup=nfs-pcmk-asd-resources tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47 subscriptionId=a370ff12-d748-4091-8749-a21c085d368f pcmk_reboot_retries=3
 
 ### create partition on Azure Shared Disk (/dev/sdc) 
 fdisk /dev/sdc # n -> p -> w -> default sizes
@@ -111,12 +111,7 @@ vgchange -an pcmkvg                     # it needs to unmount and disable the vo
 # The following procedure configures the volume group in a way that will ensure that only the cluster is capable of activating the volume 
 # group, and that the volume group will not be activated outside of the cluster on startup. If the volume group is activated by a system 
 # outside of the cluster, there is a risk of corrupting the volume group's metadata.
-
 lvmconf --enable-halvm --services --startstopservices
-
-##########################################################################################
-### run on node 1
-##########################################################################################
 
 # add volume exclusion in lvm.conf file by adding volume_list = ["rootvg"] only. please note that you must NOT include your vg (pcmkvg) for 
 # it to be controlled by cluster
@@ -125,6 +120,10 @@ vim /etc/lvm/lvm.conf # ---> LINE 1240: volume_list = ["rootvg"]
 ### rebuild initramfs once lvm.conf is modified
 cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r).img.$(date +%m-%d-%H%M%S).bak
 dracut -f -H -v /boot/initramfs-$(uname -r).img $(uname -r)
+
+##########################################################################################
+### run on node 1
+##########################################################################################
 
 # create probing port from Internal Load Balancer
 pcs resource create nfs-pcmk-ilb azure-lb port=59998 --group nfs-pcmk-resources
