@@ -50,3 +50,8 @@ gluster volume set glustervol nfs.acl off
 
 # GLUSTER CLIENT SETUP (192.168.1.14 only)
 yum install glusterfs glusterfs-fuse attr -y
+mount -t glusterfs vm-gfs-01:/glustervol /mnt/glusterfs/
+mount -t glusterfs -o backup-volfile-servers=vm-gfs-02:vm-gfs-03,log-level=WARNING,log-file=/var/log/gluster.log vm-gfs-01:/glustervol /mnt/glusterfs
+#fstab: vm-gfs-01:/glustervol       /mnt/glusterfs  glusterfs       defaults,_netdev,backup-volfile-servers=vm-gfs-02:vm-gfs-03     0 0
+
+
